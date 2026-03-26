@@ -7,9 +7,9 @@
         body, html {
             margin: 0;
             padding: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #000;
+            width: 100vw;
+            height: 100vh;
+            background: #18002a;
             overflow: hidden;
             display: flex;
             justify-content: center;
@@ -17,32 +17,61 @@
         }
         canvas {
             display: block;
-            filter: contrast(115%) brightness(115%);
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            filter: contrast(115%) brightness(117%);
         }
         #ui-overlay {
             position: absolute;
             z-index: 10;
-            text-align: center;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(13,0,20,0.45);
+            transition: all 0.7s cubic-bezier(.68,-0.6,.32,1.6);
         }
         button {
             background: transparent;
             color: #d194ff;
-            border: 1px solid #8a2be2;
-            padding: 20px 50px;
-            font-size: 1.5rem;
-            border-radius: 100px;
+            border: 2px solid #8a2be2;
+            padding: 22px 60px;
+            font-size: 1.7rem;
+            border-radius: 90px;
             cursor: pointer;
-            letter-spacing: 10px;
+            letter-spacing: 11px;
             text-transform: uppercase;
-            transition: all 0.5s ease;
-            box-shadow: 0 0 20px rgba(138, 43, 226, 0.2);
+            transition: all 0.4s;
+            box-shadow: 0 0 44px rgba(138,43,226,0.18);
             font-family: 'Segoe UI', sans-serif;
         }
         button:hover {
             background: #8a2be2;
             color: white;
-            box-shadow: 0 0 50px rgba(138, 43, 226, 0.8);
-            letter-spacing: 15px;
+            box-shadow: 0 0 70px 30px rgba(218,112,214,0.17);
+            letter-spacing:16px;
+        }
+        .phrase {
+            position: absolute;
+            top: 53%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #e0b0ff;
+            font-size: 2.9vw;
+            font-family: 'Segoe UI', 'Arial', sans-serif;
+            font-weight: bold;
+            letter-spacing: 5px;
+            text-shadow: 0 0 40px #9b59b6, 0 0 6px #fff3;
+            opacity: 0;
+            transition: opacity 0.9s, transform 0.9s;
+            z-index: 20;
+            pointer-events: none;
+            user-select: none;
+        }
+        .phrase.visible {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.08);
         }
     </style>
 </head>
@@ -51,20 +80,23 @@
 <audio id="musica-fondo" src="musica.mp3" preload="auto"></audio>
 
 <div id="ui-overlay">
-    <button id="activate-btn">Activar Protocolo</button>
+    <button id="activate-btn">ACTIVAR PROTOCOLO</button>
 </div>
 <canvas id="main-canvas"></canvas>
+<div class="phrase" id="frase-actual"></div>
 
 <script>
 /**
- * PROTOCOLO SUPERNOVA V5.5 - PROYECTO MIGUEL MEDINA
- * Sistema de partículas de alta densidad con integración de audio.
+ * PROTOCOLO SUPERNOVA V6 - PROYECTO MIGUEL MEDINA
+ * Animación de partículas, frases románticas y fondo mejorado.
  */
 
 const canvas = document.getElementById('main-canvas');
 const ctx = canvas.getContext('2d', { alpha: false });
 const btn = document.getElementById('activate-btn');
+const overlay = document.getElementById('ui-overlay');
 const audio = document.getElementById('musica-fondo');
+const fraseActual = document.getElementById('frase-actual');
 
 let particles = [];
 let targetPoints = [];
@@ -73,15 +105,15 @@ let isStarted = false;
 let heartPhase = false;
 
 const phrases = [
-    "mi puchamona",
-    "te amo mucho mucho",
-    "gracias por ser mi novia",
-    "te amo con mi vida",
-    "y mi corazón",
-    "tienes una",
-    "hermosa mirada",
-    "que parece",
-    "constelaciones",
+    "Eres mi universo favorito.",
+    "Tus ojos brillan<br>como miles de constelaciones.",
+    "Te amo más allá<br>de las estrellas.",
+    "Gracias por ser<br>mi luz constante.",
+    "Cada día contigo<br>es una supernova.",
+    "Tu sonrisa ilumina<br>mi existencia.",
+    "Eres la melodía<br>de mi galaxia.",
+    "En tu abrazo<br>encontré mi hogar.",
+    "Te elijo<br>en cada línea del tiempo.",
     "❤"
 ];
 
@@ -93,53 +125,43 @@ window.addEventListener('resize', resize);
 resize();
 
 class Particle {
-    constructor() {
-        this.init();
-    }
-
+    constructor() { this.init(); }
     init() {
         this.x = Math.random() * canvas.width;
         this.y = Math.random() * canvas.height;
-        this.vx = (Math.random() - 0.5) * 1.5;
-        this.vy = (Math.random() - 0.5) * 1.5;
-        this.size = Math.random() * 2.8 + 0.8;
-        
+        this.vx = (Math.random() - 0.5) * 1.65;
+        this.vy = (Math.random() - 0.5) * 1.65;
+        this.size = Math.random() * 2.55 + 1.05;
         const colors = ['#d194ff', '#8a2be2', '#9b59b6', '#da70d6', '#e0b0ff'];
         this.color = colors[Math.floor(Math.random() * colors.length)];
-        
-        this.alpha = Math.random() * 0.6 + 0.4;
-        this.friction = 0.95;
-        this.accel = 0.008; 
+        this.alpha = Math.random() * 0.7 + 0.38;
+        this.friction = 0.946;
+        this.accel = 0.011; 
     }
-
     update() {
         if (isStarted && targetPoints.length > 0) {
             const index = particles.indexOf(this) % targetPoints.length;
             const target = targetPoints[index];
-            
             const dx = target.x - this.x;
             const dy = target.y - this.y;
-            
             this.vx += dx * this.accel;
             this.vy += dy * this.accel;
         }
-
         this.vx *= this.friction;
         this.vy *= this.friction;
         this.x += this.vx;
         this.y += this.vy;
     }
-
     draw() {
-        // Efecto Bloom multicapa para nitidez y brillo
-        ctx.globalAlpha = this.alpha * 0.25;
+        // Glow envolvente
+        ctx.globalAlpha = this.alpha * 0.13;
         ctx.fillStyle = this.color;
-        ctx.shadowBlur = this.size * 2;
+        ctx.shadowBlur = this.size * 6;
         ctx.shadowColor = this.color;
         ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size * 2, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, this.size * 2.4, 0, Math.PI * 2);
         ctx.fill();
-
+        // Núcleo brillante
         ctx.globalAlpha = this.alpha;
         ctx.shadowBlur = 0;
         ctx.beginPath();
@@ -153,17 +175,14 @@ function getPoints(text) {
     const tempCtx = tempCanvas.getContext('2d');
     tempCanvas.width = canvas.width;
     tempCanvas.height = canvas.height;
-
-    const fontSize = Math.min(canvas.width / 4.5, 180);
+    const fontSize = Math.min(canvas.width / 4.2, 170);
     tempCtx.font = `bold ${fontSize}px 'Arial'`;
     tempCtx.textAlign = 'center';
     tempCtx.textBaseline = 'middle';
-    tempCtx.fillStyle = 'white';
-    tempCtx.fillText(text, tempCanvas.width / 2, tempCanvas.height / 2);
-
+    tempCtx.fillStyle = '#fff';
+    tempCtx.fillText(text.replace(/<br>/g,' '), tempCanvas.width / 2, tempCanvas.height / 2);
     const data = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
     const points = [];
-    
     for (let y = 0; y < tempCanvas.height; y += 3) {
         for (let x = 0; x < tempCanvas.width; x += 3) {
             if (data[(y * tempCanvas.width + x) * 4 + 3] > 128) {
@@ -190,42 +209,67 @@ function getHeart(scaleFactor = 1) {
 
 function init() {
     particles = [];
-    for (let i = 0; i < 4500; i++) {
+    for (let i = 0; i < 4100; i++) {
         particles.push(new Particle());
     }
 }
-
+function showPhrase(txt) {
+    fraseActual.innerHTML = txt;
+    fraseActual.classList.add('visible');
+}
+function hidePhrase() {
+    fraseActual.classList.remove('visible');
+}
 function nextPhase() {
-    if (phraseIndex < phrases.length - 1) {
-        targetPoints = getPoints(phrases[phraseIndex]);
+    if (phraseIndex < phrases.length) {
+        const texto = phrases[phraseIndex];
+        showPhrase(texto);
+        targetPoints = getPoints(texto);
         phraseIndex++;
-        setTimeout(nextPhase, 4000); // 4 segundos por frase para mejor lectura
+        setTimeout(() => {
+            hidePhrase();
+            setTimeout(nextPhase, 850);
+        }, 3500); 
     } else {
         heartPhase = true;
+        fraseActual.innerHTML = "Siempre juntos<br>en nuestra galaxia 💜";
+        fraseActual.classList.add('visible');
         targetPoints = getHeart();
-        
         setInterval(() => {
-            targetPoints = getHeart(1.15);
+            targetPoints = getHeart(1.12);
             setTimeout(() => {
                 targetPoints = getHeart(1.0);
-            }, 300);
-        }, 1400);
+            }, 320);
+        }, 1450);
     }
 }
-
+let gradAngle = 0;
 function loop() {
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+    // Fondo con gradiente animado
+    gradAngle += 0.001;
+    const gradX = Math.cos(gradAngle) * 200 + canvas.width/2;
+    const gradY = Math.sin(gradAngle) * 200 + canvas.height/2;
+    const g = ctx.createRadialGradient(gradX, gradY, canvas.width * 0.1, canvas.width/2, canvas.height/2, canvas.width*0.85);
+    g.addColorStop(0, "#26223b");
+    g.addColorStop(1, "#180020");
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle = g;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    particles.forEach(p => {
-        p.update();
-        p.draw();
-    });
+    particles.forEach(p => { p.update(); p.draw(); });
 
     requestAnimationFrame(loop);
 }
 
+btn.addEventListener('click', function() {
+    isStarted = true;
+    overlay.style.opacity = '0';
+    setTimeout(()=>overlay.style.display='none',800);
+    init();
+    nextPhase();
+    audio.currentTime = 0;
+    audio.volume = 0.33;
+    audio.play();
 });
 
 init();
@@ -233,4 +277,4 @@ loop();
 </script>
 </body>
 </html>
-
+   
