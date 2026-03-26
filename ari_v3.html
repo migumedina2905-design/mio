@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Viernes - Protocolo Romántico v2.0</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #000;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            cursor: crosshair;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        #btn-iniciar {
+            z-index: 10;
+            padding: 15px 35px;
+            font-size: 20px;
+            font-family: 'Segoe UI', sans-serif;
+            background: rgba(138, 43, 226, 0.2);
+            color: #d194ff;
+            border: 2px solid #8a2be2;
+            border-radius: 50px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            transition: 0.5s;
+            box-shadow: 0 0 20px rgba(138, 43, 226, 0.4);
+        }
+        #btn-iniciar:hover {
+            background: #8a2be2;
+            color: white;
+            box-shadow: 0 0 40px rgba(138, 43, 226, 0.8);
+        }
+    </style>
+</head>
+<body>
+
+    <button id="btn-iniciar">INICIAR</button>
+    <canvas id="canvas"></canvas>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const btn = document.getElementById('btn-iniciar');
+
+let particles = [];
+let targetPoints = [];
+let phraseIndex = 0;
+let isStarted = false;
+const phrases = ["mi niña", "preciosa", "gracias", "por existir", "❤"];
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+class Particle {
+    constructor() {
+        this.reset();
+    }
+
+    reset() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.vx = (Math.random() - 0.5) * 2;
+        this.vy = (Math.random() - 0.5) * 2;
+        this.radius = Math.random() * 1.5 + 0.5;
+        // Paleta lila/violeta
+        const hues = [270, 280, 290, 300];
+        this.color = `hsla(${hues[Math.floor(Math.random() * hues.length)]}, 80%, 70%, ${Math.random() * 0.5 + 0.5})`;
+        this.friction = 0.92;
+        this.speed = 0.08;
+    }
+
+    update() {
+        if (isStarted && targetPoints.length > 0) {
+            let target = targetPoints[Math.floor(Math.random() * targetPoints.length)];
+            let dx = target.x - this.x;
+            let dy = target.y - this.y;
+            this.vx += dx * this.speed;
+            this.vy += dy * this.speed;
+        } else {
+            // Efecto flotante inicial
+            this.vx += (Math.random() - 0.5) * 0.05;
+            this.vy += (Math.random() - 0.5) * 0.05;
+        }
+
+        this.vx *= this.friction;
+        this.vy *= this.friction;
+        this.x += this.vx;
+        this.y += this.vy;
+    }
+
+    draw() {
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+function getPoints(text) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const fontSize = Math.min(canvas.width / 6, 120);
+    ctx.font = `bold ${fontSize}px Arial`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    const points = [];
+    for (let y = 0; y < canvas.height; y += 4) {
+        for (let x = 0; x < canvas.width; x += 4) {
+            if (imageData[(y * canvas.width + x) * 4 + 3] > 128) {
+                points.push({ x, y });
+            }
+        }
+    }
+    return points;
+}
+
+function getHeartPoints() {
+    const points = [];
+    const scale = Math.min(canvas.width, canvas.height) / 45;
+    for (let t = 0; t < Math.PI * 2; t += 0.01) {
+        let x = 16 * Math.pow(Math.sin(t), 3);
+        let y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+        points.push({
+            x: x * scale + canvas.width / 2,
+            y: y * scale + canvas.height / 2
+        });
+    }
+    return points;
+}
+
+function init() {
+    for (let i = 0; i < 1800; i++) {
+        particles.push(new Particle());
+    }
+}
+
+function nextPhase() {
+    if (phraseIndex < phrases.length - 1) {
+        targetPoints = getPoints(phrases[phraseIndex]);
+        phraseIndex++;
+        setTimeout(nextPhase, 2500); 
+    } else {
+        targetPoints = getHeartPoints();
+        // Latido final
+        setInterval(() => {
+            const currentPoints = getHeartPoints();
+            targetPoints = currentPoints.map(p => ({
+                x: (p.x - canvas.width/2) * 1.15 + canvas.width/2,
+                y: (p.y - canvas.height/2) * 1.15 + canvas.height/2
+            }));
+            setTimeout(() => { targetPoints = getHeartPoints(); }, 150);
+        }, 1200);
+    }
+}
+
+function animate() {
+    // El secreto del video: rastro de movimiento suave
+    ctx.fillStyle = "rgba(0, 0, 0, 0.15)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    particles.forEach(p => {
+        p.update();
+        p.draw();
+    });
+    requestAnimationFrame(animate);
+}
+
+btn.addEventListener('click', () => {
+    btn.style.display = 'none';
+    isStarted = true;
+    nextPhase();
+});
+
+init();
+animate();
+
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+});
+</script>
+</body>
+</html>
