@@ -226,12 +226,6 @@ function loop() {
     requestAnimationFrame(loop);
 }
 
-btn.addEventListener('click', () => {
-    // ACTIVACIÓN DE AUDIO Y ANIMACIÓN
-    audio.play().catch(e => console.log("Error al reproducir audio:", e));
-    document.getElementById('ui-overlay').style.display = 'none';
-    isStarted = true;
-    nextPhase();
 });
 
 init();
