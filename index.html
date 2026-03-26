@@ -2,93 +2,126 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Viernes - Protocolo Romántico v2.0</title>
+    <title>Viernes - Protocolo Constelación Ari Final + Audio</title>
     <style>
-        body {
+        body, html {
             margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
             background-color: #000;
             overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            cursor: crosshair;
         }
         canvas {
+            display: block;
+            filter: contrast(115%) brightness(115%);
+        }
+        #ui-overlay {
             position: absolute;
-            top: 0;
-            left: 0;
-        }
-        #btn-iniciar {
             z-index: 10;
-            padding: 15px 35px;
-            font-size: 20px;
-            font-family: 'Segoe UI', sans-serif;
-            background: rgba(138, 43, 226, 0.2);
-            color: #d194ff;
-            border: 2px solid #8a2be2;
-            border-radius: 50px;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 5px;
-            transition: 0.5s;
-            box-shadow: 0 0 20px rgba(138, 43, 226, 0.4);
+            text-align: center;
         }
-        #btn-iniciar:hover {
+        button {
+            background: transparent;
+            color: #d194ff;
+            border: 1px solid #8a2be2;
+            padding: 20px 50px;
+            font-size: 1.5rem;
+            border-radius: 100px;
+            cursor: pointer;
+            letter-spacing: 10px;
+            text-transform: uppercase;
+            transition: all 0.5s ease;
+            box-shadow: 0 0 20px rgba(138, 43, 226, 0.2);
+            font-family: 'Segoe UI', sans-serif;
+        }
+        button:hover {
             background: #8a2be2;
             color: white;
-            box-shadow: 0 0 40px rgba(138, 43, 226, 0.8);
+            box-shadow: 0 0 50px rgba(138, 43, 226, 0.8);
+            letter-spacing: 15px;
         }
     </style>
 </head>
 <body>
 
-    <button id="btn-iniciar">INICIAR</button>
-    <canvas id="canvas"></canvas>
+<audio id="musica-fondo" src="musica.mp3" preload="auto"></audio>
+
+<div id="ui-overlay">
+    <button id="activate-btn">Activar Protocolo</button>
+</div>
+<canvas id="main-canvas"></canvas>
 
 <script>
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-const btn = document.getElementById('btn-iniciar');
+/**
+ * PROTOCOLO SUPERNOVA V5.5 - PROYECTO MIGUEL MEDINA
+ * Sistema de partículas de alta densidad con integración de audio.
+ */
+
+const canvas = document.getElementById('main-canvas');
+const ctx = canvas.getContext('2d', { alpha: false });
+const btn = document.getElementById('activate-btn');
+const audio = document.getElementById('musica-fondo');
 
 let particles = [];
 let targetPoints = [];
 let phraseIndex = 0;
 let isStarted = false;
-const phrases = ["mi niña", "preciosa", "gracias", "por existir", "❤"];
+let heartPhase = false;
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+const phrases = [
+    "mi puchamona",
+    "te amo mucho mucho",
+    "gracias por ser mi novia",
+    "te amo con mi vida",
+    "y mi corazón",
+    "tienes una",
+    "hermosa mirada",
+    "que parece",
+    "constelaciones",
+    "❤"
+];
+
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
 
 class Particle {
     constructor() {
-        this.reset();
+        this.init();
     }
 
-    reset() {
+    init() {
         this.x = Math.random() * canvas.width;
         this.y = Math.random() * canvas.height;
-        this.vx = (Math.random() - 0.5) * 2;
-        this.vy = (Math.random() - 0.5) * 2;
-        this.radius = Math.random() * 1.5 + 0.5;
-        // Paleta lila/violeta
-        const hues = [270, 280, 290, 300];
-        this.color = `hsla(${hues[Math.floor(Math.random() * hues.length)]}, 80%, 70%, ${Math.random() * 0.5 + 0.5})`;
-        this.friction = 0.92;
-        this.speed = 0.08;
+        this.vx = (Math.random() - 0.5) * 1.5;
+        this.vy = (Math.random() - 0.5) * 1.5;
+        this.size = Math.random() * 2.8 + 0.8;
+        
+        const colors = ['#d194ff', '#8a2be2', '#9b59b6', '#da70d6', '#e0b0ff'];
+        this.color = colors[Math.floor(Math.random() * colors.length)];
+        
+        this.alpha = Math.random() * 0.6 + 0.4;
+        this.friction = 0.95;
+        this.accel = 0.008; 
     }
 
     update() {
         if (isStarted && targetPoints.length > 0) {
-            let target = targetPoints[Math.floor(Math.random() * targetPoints.length)];
-            let dx = target.x - this.x;
-            let dy = target.y - this.y;
-            this.vx += dx * this.speed;
-            this.vy += dy * this.speed;
-        } else {
-            // Efecto flotante inicial
-            this.vx += (Math.random() - 0.5) * 0.05;
-            this.vy += (Math.random() - 0.5) * 0.05;
+            const index = particles.indexOf(this) % targetPoints.length;
+            const target = targetPoints[index];
+            
+            const dx = target.x - this.x;
+            const dy = target.y - this.y;
+            
+            this.vx += dx * this.accel;
+            this.vy += dy * this.accel;
         }
 
         this.vx *= this.friction;
@@ -98,26 +131,42 @@ class Particle {
     }
 
     draw() {
+        // Efecto Bloom multicapa para nitidez y brillo
+        ctx.globalAlpha = this.alpha * 0.25;
         ctx.fillStyle = this.color;
+        ctx.shadowBlur = this.size * 2;
+        ctx.shadowColor = this.color;
         ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, this.size * 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.globalAlpha = this.alpha;
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
         ctx.fill();
     }
 }
 
 function getPoints(text) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const fontSize = Math.min(canvas.width / 6, 120);
-    ctx.font = `bold ${fontSize}px Arial`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
 
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    const fontSize = Math.min(canvas.width / 4.5, 180);
+    tempCtx.font = `bold ${fontSize}px 'Arial'`;
+    tempCtx.textAlign = 'center';
+    tempCtx.textBaseline = 'middle';
+    tempCtx.fillStyle = 'white';
+    tempCtx.fillText(text, tempCanvas.width / 2, tempCanvas.height / 2);
+
+    const data = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
     const points = [];
-    for (let y = 0; y < canvas.height; y += 4) {
-        for (let x = 0; x < canvas.width; x += 4) {
-            if (imageData[(y * canvas.width + x) * 4 + 3] > 128) {
+    
+    for (let y = 0; y < tempCanvas.height; y += 3) {
+        for (let x = 0; x < tempCanvas.width; x += 3) {
+            if (data[(y * tempCanvas.width + x) * 4 + 3] > 128) {
                 points.push({ x, y });
             }
         }
@@ -125,12 +174,12 @@ function getPoints(text) {
     return points;
 }
 
-function getHeartPoints() {
+function getHeart(scaleFactor = 1) {
     const points = [];
-    const scale = Math.min(canvas.width, canvas.height) / 45;
-    for (let t = 0; t < Math.PI * 2; t += 0.01) {
-        let x = 16 * Math.pow(Math.sin(t), 3);
-        let y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+    const scale = (Math.min(canvas.width, canvas.height) / 28) * scaleFactor;
+    for (let t = 0; t < Math.PI * 2; t += 0.005) {
+        const x = 16 * Math.pow(Math.sin(t), 3);
+        const y = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
         points.push({
             x: x * scale + canvas.width / 2,
             y: y * scale + canvas.height / 2
@@ -140,7 +189,8 @@ function getHeartPoints() {
 }
 
 function init() {
-    for (let i = 0; i < 1800; i++) {
+    particles = [];
+    for (let i = 0; i < 4500; i++) {
         particles.push(new Particle());
     }
 }
@@ -149,46 +199,44 @@ function nextPhase() {
     if (phraseIndex < phrases.length - 1) {
         targetPoints = getPoints(phrases[phraseIndex]);
         phraseIndex++;
-        setTimeout(nextPhase, 2500); 
+        setTimeout(nextPhase, 4000); // 4 segundos por frase para mejor lectura
     } else {
-        targetPoints = getHeartPoints();
-        // Latido final
+        heartPhase = true;
+        targetPoints = getHeart();
+        
         setInterval(() => {
-            const currentPoints = getHeartPoints();
-            targetPoints = currentPoints.map(p => ({
-                x: (p.x - canvas.width/2) * 1.15 + canvas.width/2,
-                y: (p.y - canvas.height/2) * 1.15 + canvas.height/2
-            }));
-            setTimeout(() => { targetPoints = getHeartPoints(); }, 150);
-        }, 1200);
+            targetPoints = getHeart(1.15);
+            setTimeout(() => {
+                targetPoints = getHeart(1.0);
+            }, 300);
+        }, 1400);
     }
 }
 
-function animate() {
-    // El secreto del video: rastro de movimiento suave
-    ctx.fillStyle = "rgba(0, 0, 0, 0.15)";
+function loop() {
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     particles.forEach(p => {
         p.update();
         p.draw();
     });
-    requestAnimationFrame(animate);
+
+    requestAnimationFrame(loop);
 }
 
 btn.addEventListener('click', () => {
-    btn.style.display = 'none';
+    // ACTIVACIÓN DE AUDIO Y ANIMACIÓN
+    audio.play().catch(e => console.log("Error al reproducir audio:", e));
+    document.getElementById('ui-overlay').style.display = 'none';
     isStarted = true;
     nextPhase();
 });
 
 init();
-animate();
-
-window.addEventListener('resize', () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-});
+loop();
 </script>
 </body>
 </html>
+
